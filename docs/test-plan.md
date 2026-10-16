@@ -1,6 +1,6 @@
-# Game-Day Test Plan
+# Validation Plan
 
-Each test lists the method, expected result and the evidence to capture (save screenshots under `evidence/` as `T<nn>-<name>.png`).
+> This design is not deployed. These are the acceptance tests an implementer should run to prove the design meets its security, resilience and RTO/RPO targets. Each test lists the method, the expected result and the evidence to capture.
 
 | # | Test | Method | Expected result | Evidence |
 |---|---|---|---|---|
@@ -21,41 +21,9 @@ Each test lists the method, expected result and the evidence to capture (save sc
 | T15 | Backup restore | Restore latest cross-Region Aurora backup to a new cluster | Restore succeeds in DR Region | AWS Backup restore job |
 | T16 | Clean-up verified | `terraform destroy` both Regions | No NAT GWs, EIPs, Aurora clusters left | Cost Explorer / console |
 
-## Result log
+## How to measure RTO and RPO (T13)
 
-Status values: `Pass` · `Fail` · `Not run`. Fill this in **only** from real runs; link each row to its evidence file.
-
-| Test | Date (UTC) | Result | Measured value | Evidence | Notes |
-|---|---|---|---|---|---|
-| T01 | | Not run | | | |
-| T02 | | Not run | | | |
-| T03 | | Not run | | | |
-| T04 | | Not run | | | |
-| T05 | | Not run | | | |
-| T06 | | Not run | Replacement time: | | |
-| T07 | | Not run | Replication lag: | | |
-| T08 | | Not run | Replication time: | | |
-| T09 | | Not run | | | |
-| T10 | | Not run | DNS flip time: | | |
-| T11 | | Not run | Scale-out time: | | |
-| T12 | | Not run | Promotion time: | | switchover / failover? |
-| T13 | | Not run | **RTO = __ min · RPO = __ s** | | |
-| T14 | | Not run | | | |
-| T15 | | Not run | Restore time: | | |
-| T16 | | Not run | | | |
-
-## RTO / RPO timeline (T13)
-
-| Event | UTC time | Source |
-|---|---|---|
-| Failure injected (`/health` → 503) | | Terminal `date -u` |
-| Route 53 health check unhealthy | | Route 53 console / `HealthCheckStatus` |
-| First probe response from eu-central-1 | | `T13-probe.csv` |
-| Lambda scale-out started | | Lambda logs |
-| SSM Automation approved | | SSM execution history |
-| DR cluster promoted to writer | | RDS events |
-| First successful write in DR | | App / `dr_marker` |
-| **RTO** (failure → first write in DR) | **__ min** | |
-| **RPO** (last primary marker − last DR marker) | **__ s** | `T13-rpo-markers.txt` |
-
-How to measure: see [`evidence/README.md`](../evidence/README.md).
+- **RTO:** from a machine outside AWS, poll `https://app.example.com/health` every 5 s and log the UTC time, HTTP status and an `X-Region` response header. RTO = first failed response → first successful **write** served from eu-central-1.
+- **RPO:** during the test, insert one marker row per second (`seq`, `written_at`) into the primary database. After promotion, compare the last marker in the old primary with the last marker in the new writer. RPO = the gap between them.
+- Use the **unplanned** `failover-global-cluster --allow-data-loss` path for a realistic RPO — a planned `switchover` always shows RPO = 0.
+- Keep database credentials in a protected client config file (never `-p<password>` on the command line) and redact account IDs and IPs from any published screenshots.

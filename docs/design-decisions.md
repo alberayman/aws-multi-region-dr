@@ -88,4 +88,4 @@ Replication copies mistakes instantly. AWS Backup daily plans with **cross-Regio
 
 - 1 NAT Gateway per Region in the lab (production: 1 per AZ — otherwise an AZ failure breaks outbound access for the other AZ).
 - Aurora Serverless v2 at minimum ACUs in the lab (production: provisioned `db.r*` sized from load tests). Check the Aurora docs that your engine version supports Serverless v2 in a global database.
-- Everything is destroyed after each demo; an AWS Budgets alert is set at a low monthly threshold.
+- If built as a lab: destroy everything after each session; set an AWS Budgets alert at a low monthly threshold.

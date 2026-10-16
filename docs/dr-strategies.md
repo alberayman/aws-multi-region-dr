@@ -25,7 +25,7 @@ AWS Backup copies Aurora snapshots and EBS/S3 backups to eu-central-1. On disast
 ### Pilot Light
 Aurora Global Database secondary and DynamoDB global tables run in DR (the "pilot light"). The ALB, launch template and ASG exist but with **0** instances. Failover requires scaling from zero — adds AMI boot and warm-up time to RTO, and nothing proves the DR app tier actually works until the incident.
 
-### Warm Standby ✅ (implemented)
+### Warm Standby ✅ (chosen)
 Everything from Pilot Light **plus** a running, minimum-size app tier behind a live ALB. Route 53 can health-check the DR stack continuously, so we *know* it works. Failover = scale out + promote database.
 
 ### Multi-Site Active/Active

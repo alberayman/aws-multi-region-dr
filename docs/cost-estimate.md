@@ -2,7 +2,7 @@
 
 > **Approximate on-demand list prices, eu-west-1 / eu-central-1.** Prices change and differ per Region — always confirm with the [AWS Pricing Calculator](https://calculator.aws/) before deploying. Free-tier credits are not included.
 
-## Lab mode (what this project deploys)
+## Lab mode (if the design is implemented)
 
 Sized for a build-and-demo session, then destroyed.
 

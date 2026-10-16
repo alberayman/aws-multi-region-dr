@@ -1,10 +1,12 @@
 # Multi-Region Disaster Recovery on AWS — Warm Standby
 
 > AWS Solutions Architect – Associate (SAA-C03) graduation project · **Project 5: Multi-Region Disaster Recovery with Route 53 Failover**
+>
+> **Scope:** solution architecture and design documentation. The design is not deployed; RTO/RPO values are **design targets** justified in the [RTO/RPO budget](#rto--rpo-budget) below.
 
 A web application runs **active in eu-west-1 (Ireland)** with a **warm standby in eu-central-1 (Frankfurt)**. Route 53 health checks detect a Regional failure and shift DNS automatically; an event-driven runbook scales the standby to production size, and an approval-gated SSM Automation promotes the Aurora Global Database secondary to writer.
 
-| Target | Value | How it is met |
+| Target | Value | How the design meets it |
 |---|---|---|
 | **RTO** (time to restore service) | **≤ 15 min** | Route 53 data-plane failover (~2–3 min) + ASG scale-out (~5 min) + Aurora global failover (minutes) |
 | **RPO** – transactional data | **≤ 1 min** | Aurora Global Database storage-level replication (typically < 1 s lag); DynamoDB global tables (typically ~1 s) |
@@ -78,24 +80,20 @@ Full comparison: [docs/dr-strategies.md](docs/dr-strategies.md).
 │   ├── multi-region-dr.drawio   ← editable diagram (AWS 2024 icon set)
 │   ├── multi-region-dr.png      ← rendered diagram (draw.io data embedded)
 │   └── multi-region-dr.svg      ← vector render
-├── evidence/
-│   └── README.md                ← naming, redaction & RTO/RPO measurement guide
-├── scripts/
-│   └── probe.sh                 ← availability probe for measuring RTO
 └── docs/
     ├── dr-strategies.md         ← the 4 AWS DR strategies compared
     ├── design-decisions.md      ← architecture decision records (ADRs)
     ├── failover-runbook.md      ← failover & failback procedure
-    ├── test-plan.md             ← game-day tests with evidence checklist
+    ├── test-plan.md             ← validation plan for implementers
     ├── security.md              ← security & compliance controls
     └── cost-estimate.md         ← lab vs production cost model
 ```
 
 ---
 
-## Deployment plan
+## Implementation guide
 
-The infrastructure is defined once and deployed to both Regions.
+How this design would be built. Infrastructure is defined once in IaC and deployed to both Regions.
 
 1. **Prerequisites** — AWS account with IAM Identity Center (no long-lived access keys), Terraform ≥ 1.6, a Route 53 public hosted zone, ACM certificates in **both** Regions.
 2. **Foundation (both Regions)** — VPC, subnets, NAT, endpoints, KMS multi-Region key (primary + replica), CloudTrail, Config.
@@ -103,17 +101,28 @@ The infrastructure is defined once and deployed to both Regions.
 4. **App layer (both Regions)** — launch template, ASG, ALB, WAF web ACL, target groups.
 5. **DNS** — Route 53 health check on `https://<primary-alb>/health`, PRIMARY and SECONDARY failover alias records.
 6. **Automation** — CloudWatch alarm in us-east-1, EventBridge cross-Region rule, Lambda runbook, SNS topic, SSM Automation document with `aws:approve`.
-7. **Verify** — run the [game-day test plan](docs/test-plan.md), save proof in [`evidence/`](evidence/) and fill in the result log.
+7. **Validate** — run the [validation plan](docs/test-plan.md) before calling the DR capability production-ready.
 8. **Clean up** — `terraform destroy` in both Regions; confirm Aurora, NAT Gateways and Elastic IPs are gone (see [cost estimate](docs/cost-estimate.md)).
 
 ---
 
-## Test results
+## RTO / RPO budget
 
-> ⏳ **Not run yet.** The RTO/RPO figures above are design targets. Measured results will be recorded in the [result log](docs/test-plan.md#result-log), with proof in [`evidence/`](evidence/).
+How the targets were derived from service behaviour — the critical path is **detect → approve → promote**; compute scale-out runs in parallel.
 
-| Metric | Target | Measured |
+| Phase | Estimate | Basis |
 |---|---|---|
+| Detection | ~2 min | Route 53 health check: 3 failures × 30 s interval |
+| DNS shift | ~1 min | 60 s TTL (clients that cache longer extend this) |
+| DR scale-out *(parallel)* | ~5 min | EC2 launch + ALB health checks; reads are served by the minimum-size ASG meanwhile |
+| On-call approval | ~5 min | Paging via SNS + human decision (ADR-05) |
+| Aurora global failover | a few minutes | Promotion of the secondary cluster to writer |
+| **Total RTO (writes restored)** | **~10–13 min** | **Target ≤ 15 min** ✅ |
+| **RPO (database)** | **typically < 1 s** | Aurora Global Database replication lag; target ≤ 1 min leaves margin for lag spikes |
+
+**Assumptions:** on-call responds within 5 minutes; DR ASG minimum capacity handles read traffic until scale-out completes; replication lag is monitored with an alarm (`AuroraGlobalDBReplicationLag`). These are estimates and would be confirmed by the [validation plan](docs/test-plan.md) in an implementation.
+
+---|---|---|
 | RTO | ≤ 15 min | — |
 | RPO (database) | ≤ 1 min | — |
 | DNS failover time | ~2–3 min | — |
