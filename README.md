@@ -78,6 +78,10 @@ Full comparison: [docs/dr-strategies.md](docs/dr-strategies.md).
 │   ├── multi-region-dr.drawio   ← editable diagram (AWS 2024 icon set)
 │   ├── multi-region-dr.png      ← rendered diagram (draw.io data embedded)
 │   └── multi-region-dr.svg      ← vector render
+├── evidence/
+│   └── README.md                ← naming, redaction & RTO/RPO measurement guide
+├── scripts/
+│   └── probe.sh                 ← availability probe for measuring RTO
 └── docs/
     ├── dr-strategies.md         ← the 4 AWS DR strategies compared
     ├── design-decisions.md      ← architecture decision records (ADRs)
@@ -99,8 +103,20 @@ The infrastructure is defined once and deployed to both Regions.
 4. **App layer (both Regions)** — launch template, ASG, ALB, WAF web ACL, target groups.
 5. **DNS** — Route 53 health check on `https://<primary-alb>/health`, PRIMARY and SECONDARY failover alias records.
 6. **Automation** — CloudWatch alarm in us-east-1, EventBridge cross-Region rule, Lambda runbook, SNS topic, SSM Automation document with `aws:approve`.
-7. **Verify** — run the [game-day test plan](docs/test-plan.md) and capture evidence.
+7. **Verify** — run the [game-day test plan](docs/test-plan.md), save proof in [`evidence/`](evidence/) and fill in the result log.
 8. **Clean up** — `terraform destroy` in both Regions; confirm Aurora, NAT Gateways and Elastic IPs are gone (see [cost estimate](docs/cost-estimate.md)).
+
+---
+
+## Test results
+
+> ⏳ **Not run yet.** The RTO/RPO figures above are design targets. Measured results will be recorded in the [result log](docs/test-plan.md#result-log), with proof in [`evidence/`](evidence/).
+
+| Metric | Target | Measured |
+|---|---|---|
+| RTO | ≤ 15 min | — |
+| RPO (database) | ≤ 1 min | — |
+| DNS failover time | ~2–3 min | — |
 
 ---
 

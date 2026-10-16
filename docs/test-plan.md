@@ -23,8 +23,39 @@ Each test lists the method, expected result and the evidence to capture (save sc
 
 ## Result log
 
-| Test | Date | Pass/Fail | Notes |
-|---|---|---|---|
-| T01 | | | |
-| T10 | | | |
-| T13 | | | RTO = __ min, RPO = __ s |
+Status values: `Pass` · `Fail` · `Not run`. Fill this in **only** from real runs; link each row to its evidence file.
+
+| Test | Date (UTC) | Result | Measured value | Evidence | Notes |
+|---|---|---|---|---|---|
+| T01 | | Not run | | | |
+| T02 | | Not run | | | |
+| T03 | | Not run | | | |
+| T04 | | Not run | | | |
+| T05 | | Not run | | | |
+| T06 | | Not run | Replacement time: | | |
+| T07 | | Not run | Replication lag: | | |
+| T08 | | Not run | Replication time: | | |
+| T09 | | Not run | | | |
+| T10 | | Not run | DNS flip time: | | |
+| T11 | | Not run | Scale-out time: | | |
+| T12 | | Not run | Promotion time: | | switchover / failover? |
+| T13 | | Not run | **RTO = __ min · RPO = __ s** | | |
+| T14 | | Not run | | | |
+| T15 | | Not run | Restore time: | | |
+| T16 | | Not run | | | |
+
+## RTO / RPO timeline (T13)
+
+| Event | UTC time | Source |
+|---|---|---|
+| Failure injected (`/health` → 503) | | Terminal `date -u` |
+| Route 53 health check unhealthy | | Route 53 console / `HealthCheckStatus` |
+| First probe response from eu-central-1 | | `T13-probe.csv` |
+| Lambda scale-out started | | Lambda logs |
+| SSM Automation approved | | SSM execution history |
+| DR cluster promoted to writer | | RDS events |
+| First successful write in DR | | App / `dr_marker` |
+| **RTO** (failure → first write in DR) | **__ min** | |
+| **RPO** (last primary marker − last DR marker) | **__ s** | `T13-rpo-markers.txt` |
+
+How to measure: see [`evidence/README.md`](../evidence/README.md).
